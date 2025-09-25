@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit3, Trash2, Download, RotateCcw, Users, Hash, DollarSign, Eye, EyeOff, Lock, Unlock, Save, FolderOpen, Wifi, WifiOff } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Download, RotateCcw, Users, Hash, DollarSign, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 
 const RifaManager = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Estado principal da aplicação
   const [rifaConfig, setRifaConfig] = useState({
@@ -32,175 +30,36 @@ const RifaManager = () => {
     status: 'paid'
   });
 
-  // Detectar se está em produção
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // Verificar conexão (apenas em produção)
+  // Carregar dados do localStorage ao inicializar
   useEffect(() => {
-    if (!isProduction) {
-      setIsOnline(true);
-      return;
-    }
+    const savedReservations = localStorage.getItem('rifaReservations');
+    const savedConfig = localStorage.getItem('rifaConfig');
     
-    const checkConnection = async () => {
+    if (savedReservations) {
       try {
-        const response = await fetch('/api/data');
-        if (response.ok) {
-          setIsOnline(true);
-        } else {
-          setIsOnline(false);
-        }
+        setReservations(JSON.parse(savedReservations));
       } catch (error) {
-        setIsOnline(false);
+        console.error('Erro ao carregar reservas:', error);
       }
-    };
+    }
     
-    checkConnection();
-    const interval = setInterval(checkConnection, 10000);
-    
-    return () => clearInterval(interval);
-  }, [isProduction]);
-
-  // Carregar dados
-  useEffect(() => {
-    const loadData = async () => {
-      if (isProduction) {
-        // Modo produção - usar API
-        try {
-          setIsLoading(true);
-          const response = await fetch('/api/data');
-          const data = await response.json();
-          
-          if (data.reservations) {
-            setReservations(data.reservations);
-          }
-          
-          if (data.config) {
-            setRifaConfig(data.config);
-          }
-          
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Erro ao carregar dados da API:', error);
-          setIsLoading(false);
-        }
-      } else {
-        // Modo desenvolvimento - usar localStorage
-        const savedReservations = localStorage.getItem('rifaReservations');
-        const savedConfig = localStorage.getItem('rifaConfig');
-        
-        if (savedReservations) {
-          try {
-            setReservations(JSON.parse(savedReservations));
-          } catch (error) {
-            console.error('Erro ao carregar reservas:', error);
-          }
-        }
-        
-        if (savedConfig) {
-          try {
-            setRifaConfig(JSON.parse(savedConfig));
-          } catch (error) {
-            console.error('Erro ao carregar configuração:', error);
-          }
-        }
-      }
-    };
-
-    loadData();
-  }, [isProduction]);
-
-  // Salvar dados
-  const saveData = async (data) => {
-    if (isProduction) {
-      // Modo produção - salvar na API
+    if (savedConfig) {
       try {
-        await fetch('/api/data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
+        setRifaConfig(JSON.parse(savedConfig));
       } catch (error) {
-        console.error('Erro ao salvar na API:', error);
-      }
-    } else {
-      // Modo desenvolvimento - usar localStorage
-      if (data.reservations) {
-        localStorage.setItem('rifaReservations', JSON.stringify(data.reservations));
-      }
-      if (data.config) {
-        localStorage.setItem('rifaConfig', JSON.stringify(data.config));
+        console.error('Erro ao carregar configuração:', error);
       }
     }
-  };
+  }, []);
 
-  // Salvar reservas sempre que houver mudanças
+  // Salvar dados no localStorage sempre que houver mudanças
   useEffect(() => {
-    if (Object.keys(reservations).length > 0) {
-      saveData({ reservations, config: rifaConfig });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservations, rifaConfig, isProduction]);
+    localStorage.setItem('rifaReservations', JSON.stringify(reservations));
+  }, [reservations]);
 
-  // Salvar em arquivo JSON (backup local)
-  const saveToFile = () => {
-    const data = {
-      reservations,
-      config: rifaConfig,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
-
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `rifa_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    alert('Arquivo de backup salvo com sucesso!');
-  };
-
-  // Carregar de arquivo JSON
-  const loadFromFile = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          
-          if (data.reservations) {
-            setReservations(data.reservations);
-          }
-          
-          if (data.config) {
-            setRifaConfig(data.config);
-          }
-          
-          alert('Dados carregados com sucesso!');
-        } catch (error) {
-          alert('Erro ao carregar arquivo: ' + error.message);
-        }
-      };
-      reader.readAsText(file);
-    };
-    
-    input.click();
-  };
+  useEffect(() => {
+    localStorage.setItem('rifaConfig', JSON.stringify(rifaConfig));
+  }, [rifaConfig]);
 
   // Autenticação simples
   const handleLogin = () => {
@@ -289,16 +148,8 @@ const RifaManager = () => {
   };
 
   // Reset da cartela
-  const resetRifa = async () => {
+  const resetRifa = () => {
     if (window.confirm('Confirma o reset completo da cartela? Esta ação não pode ser desfeita!')) {
-      if (isProduction) {
-        try {
-          await fetch('/api/data', { method: 'DELETE' });
-        } catch (error) {
-          console.error('Erro ao resetar na API:', error);
-        }
-      }
-      
       setReservations({});
       setSelectedNumbers([]);
       setShowModal(false);
@@ -364,19 +215,6 @@ const RifaManager = () => {
     return filtered.sort((a, b) => a.number - b.number);
   };
 
-  // Tela de carregamento
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <h2 className="text-xl font-bold text-gray-800">Carregando dados...</h2>
-          <p className="text-gray-600 mt-2">Conectando ao servidor</p>
-        </div>
-      </div>
-    );
-  }
-
   // Tela de login
   if (!isAuthenticated) {
     return (
@@ -386,18 +224,6 @@ const RifaManager = () => {
             <Lock className="mx-auto h-12 w-12 text-blue-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-800">Acesso Administrativo</h2>
             <p className="text-gray-600 mt-2">Digite a senha para acessar o sistema</p>
-            
-            {/* Status da conexão */}
-            <div className={`flex items-center justify-center gap-2 mt-4 text-sm ${
-              isProduction ? (isOnline ? 'text-green-600' : 'text-red-600') : 'text-blue-600'
-            }`}>
-              {isProduction ? (
-                isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {isProduction ? (isOnline ? 'Conectado ao Supabase' : 'Modo offline') : 'Modo local (localStorage)'}
-            </div>
           </div>
           
           <div className="space-y-4">
@@ -445,27 +271,13 @@ const RifaManager = () => {
               <h1 className="text-2xl font-bold text-gray-800">{rifaConfig.rifaTitle}</h1>
               <p className="text-gray-600">{rifaConfig.prizeDescription}</p>
             </div>
-            <div className="flex items-center gap-4">
-              {/* Status da conexão */}
-              <div className={`flex items-center gap-2 text-sm ${
-                isProduction ? (isOnline ? 'text-green-600' : 'text-red-600') : 'text-blue-600'
-              }`}>
-                {isProduction ? (
-                  isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {isProduction ? (isOnline ? 'Online' : 'Offline') : 'Local'}
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200"
-              >
-                <Unlock className="h-4 w-4" />
-                Sair
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+              <Unlock className="h-4 w-4" />
+              Sair
+            </button>
           </div>
         </div>
       </header>
@@ -569,22 +381,6 @@ const RifaManager = () => {
               >
                 <Download className="h-4 w-4" />
                 Exportar CSV
-              </button>
-              
-              <button
-                onClick={saveToFile}
-                className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-200"
-              >
-                <Save className="h-4 w-4" />
-                Backup JSON
-              </button>
-              
-              <button
-                onClick={loadFromFile}
-                className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition duration-200"
-              >
-                <FolderOpen className="h-4 w-4" />
-                Restaurar
               </button>
               
               <button

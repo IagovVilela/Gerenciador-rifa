@@ -11,7 +11,7 @@ Sem configuração de armazenamento, os dados **NÃO são compartilhados** entre
 3. Escolha **"KV"** (Redis)
 4. Nome: `rifa-database`
 5. Região: `São Paulo` (mais próxima)
-
+image.pngimage.png
 ### **Passo 2: Configurar Variáveis**
 1. No projeto Vercel, vá em **"Settings"** → **"Environment Variables"**
 2. Adicione as variáveis que aparecem no KV:

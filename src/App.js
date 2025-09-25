@@ -32,20 +32,29 @@ const RifaManager = () => {
 
   // Carregar dados do localStorage ao inicializar
   useEffect(() => {
+    console.log('Carregando dados do localStorage...');
     const savedReservations = localStorage.getItem('rifaReservations');
     const savedConfig = localStorage.getItem('rifaConfig');
     
     if (savedReservations) {
       try {
-        setReservations(JSON.parse(savedReservations));
+        const parsedReservations = JSON.parse(savedReservations);
+        setReservations(parsedReservations);
+        console.log('Reservas carregadas do localStorage:', parsedReservations);
       } catch (error) {
         console.error('Erro ao carregar reservas:', error);
+        setReservations({});
       }
+    } else {
+      console.log('Nenhuma reserva encontrada no localStorage');
+      setReservations({});
     }
     
     if (savedConfig) {
       try {
-        setRifaConfig(JSON.parse(savedConfig));
+        const parsedConfig = JSON.parse(savedConfig);
+        setRifaConfig(parsedConfig);
+        console.log('Configuração carregada do localStorage:', parsedConfig);
       } catch (error) {
         console.error('Erro ao carregar configuração:', error);
       }
@@ -54,11 +63,15 @@ const RifaManager = () => {
 
   // Salvar dados no localStorage sempre que houver mudanças
   useEffect(() => {
-    localStorage.setItem('rifaReservations', JSON.stringify(reservations));
+    if (Object.keys(reservations).length > 0 || Object.keys(reservations).length === 0) {
+      localStorage.setItem('rifaReservations', JSON.stringify(reservations));
+      console.log('Reservas salvas no localStorage:', reservations);
+    }
   }, [reservations]);
 
   useEffect(() => {
     localStorage.setItem('rifaConfig', JSON.stringify(rifaConfig));
+    console.log('Configuração salva no localStorage:', rifaConfig);
   }, [rifaConfig]);
 
   // Autenticação simples
@@ -131,10 +144,15 @@ const RifaManager = () => {
       };
     });
 
+    console.log('Salvando nova reserva:', newReservations);
     setReservations(newReservations);
     setSelectedNumbers([]);
     setShowModal(false);
     setFormData({ name: '', contact: '', notes: '', status: 'paid' });
+    
+    // Salvar imediatamente no localStorage
+    localStorage.setItem('rifaReservations', JSON.stringify(newReservations));
+    console.log('Reserva salva diretamente no localStorage');
   };
 
   // Deletar reserva - CORRIGIDO
@@ -146,7 +164,10 @@ const RifaManager = () => {
       setReservations(newReservations);
       // Remove da seleção se estiver selecionado
       setSelectedNumbers(prev => prev.filter(n => n !== number));
-      console.log('Reserva deletada com sucesso');
+      
+      // Salvar imediatamente no localStorage
+      localStorage.setItem('rifaReservations', JSON.stringify(newReservations));
+      console.log('Reserva deletada e salva no localStorage:', newReservations);
     }
   };
 
@@ -154,12 +175,16 @@ const RifaManager = () => {
   const resetRifa = () => {
     console.log('Tentando fazer reset da rifa');
     if (window.confirm('Confirma o reset completo da cartela? Esta ação não pode ser desfeita!')) {
-      setReservations({});
+      const emptyReservations = {};
+      setReservations(emptyReservations);
       setSelectedNumbers([]);
       setShowModal(false);
       setEditingReservation(null);
       setFormData({ name: '', contact: '', notes: '', status: 'paid' });
-      console.log('Reset realizado com sucesso');
+      
+      // Salvar imediatamente no localStorage
+      localStorage.setItem('rifaReservations', JSON.stringify(emptyReservations));
+      console.log('Reset realizado e salvo no localStorage');
     }
   };
 

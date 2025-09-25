@@ -32,18 +32,24 @@ const RifaManager = () => {
     status: 'paid'
   });
 
-  // Detectar se está em produção (Vercel) ou desenvolvimento
+  // Detectar se está em produção
   const isProduction = process.env.NODE_ENV === 'production';
-  const API_URL = isProduction ? '/api/data' : null;
 
   // Verificar conexão (apenas em produção)
   useEffect(() => {
-    if (!isProduction) return;
+    if (!isProduction) {
+      setIsOnline(true);
+      return;
+    }
     
     const checkConnection = async () => {
       try {
-        await fetch(API_URL);
-        setIsOnline(true);
+        const response = await fetch('/api/data');
+        if (response.ok) {
+          setIsOnline(true);
+        } else {
+          setIsOnline(false);
+        }
       } catch (error) {
         setIsOnline(false);
       }
@@ -53,16 +59,16 @@ const RifaManager = () => {
     const interval = setInterval(checkConnection, 10000);
     
     return () => clearInterval(interval);
-  }, [API_URL, isProduction]);
+  }, [isProduction]);
 
   // Carregar dados
   useEffect(() => {
     const loadData = async () => {
-      if (isProduction && API_URL) {
+      if (isProduction) {
         // Modo produção - usar API
         try {
           setIsLoading(true);
-          const response = await fetch(API_URL);
+          const response = await fetch('/api/data');
           const data = await response.json();
           
           if (data.reservations) {
@@ -76,46 +82,40 @@ const RifaManager = () => {
           setIsLoading(false);
         } catch (error) {
           console.error('Erro ao carregar dados da API:', error);
-          // Fallback para localStorage
-          loadFromLocalStorage();
           setIsLoading(false);
         }
       } else {
         // Modo desenvolvimento - usar localStorage
-        loadFromLocalStorage();
-      }
-    };
-
-    const loadFromLocalStorage = () => {
-      const savedReservations = localStorage.getItem('rifaReservations');
-      const savedConfig = localStorage.getItem('rifaConfig');
-      
-      if (savedReservations) {
-        try {
-          setReservations(JSON.parse(savedReservations));
-        } catch (error) {
-          console.error('Erro ao carregar reservas:', error);
+        const savedReservations = localStorage.getItem('rifaReservations');
+        const savedConfig = localStorage.getItem('rifaConfig');
+        
+        if (savedReservations) {
+          try {
+            setReservations(JSON.parse(savedReservations));
+          } catch (error) {
+            console.error('Erro ao carregar reservas:', error);
+          }
         }
-      }
-      
-      if (savedConfig) {
-        try {
-          setRifaConfig(JSON.parse(savedConfig));
-        } catch (error) {
-          console.error('Erro ao carregar configuração:', error);
+        
+        if (savedConfig) {
+          try {
+            setRifaConfig(JSON.parse(savedConfig));
+          } catch (error) {
+            console.error('Erro ao carregar configuração:', error);
+          }
         }
       }
     };
 
     loadData();
-  }, [isProduction, API_URL]);
+  }, [isProduction]);
 
   // Salvar dados
-  const saveData = React.useCallback(async (data) => {
-    if (isProduction && API_URL && isOnline) {
+  const saveData = async (data) => {
+    if (isProduction) {
       // Modo produção - salvar na API
       try {
-        await fetch(API_URL, {
+        await fetch('/api/data', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -124,21 +124,15 @@ const RifaManager = () => {
         });
       } catch (error) {
         console.error('Erro ao salvar na API:', error);
-        // Fallback para localStorage
-        saveToLocalStorage(data);
       }
     } else {
-      // Modo desenvolvimento ou offline - usar localStorage
-      saveToLocalStorage(data);
-    }
-  }, [isProduction, API_URL, isOnline]);
-
-  const saveToLocalStorage = (data) => {
-    if (data.reservations) {
-      localStorage.setItem('rifaReservations', JSON.stringify(data.reservations));
-    }
-    if (data.config) {
-      localStorage.setItem('rifaConfig', JSON.stringify(data.config));
+      // Modo desenvolvimento - usar localStorage
+      if (data.reservations) {
+        localStorage.setItem('rifaReservations', JSON.stringify(data.reservations));
+      }
+      if (data.config) {
+        localStorage.setItem('rifaConfig', JSON.stringify(data.config));
+      }
     }
   };
 
@@ -147,7 +141,7 @@ const RifaManager = () => {
     if (Object.keys(reservations).length > 0) {
       saveData({ reservations, config: rifaConfig });
     }
-  }, [reservations, rifaConfig, saveData]);
+  }, [reservations, rifaConfig, isProduction]);
 
   // Salvar em arquivo JSON (backup local)
   const saveToFile = () => {
@@ -285,24 +279,20 @@ const RifaManager = () => {
 
   // Deletar reserva
   const deleteReservation = (number) => {
-    console.log('Tentando deletar número:', number);
     if (window.confirm(`Confirma a exclusão da reserva do número ${number}?`)) {
       const newReservations = { ...reservations };
       delete newReservations[number];
       setReservations(newReservations);
-      // Remove da seleção se estiver selecionado
       setSelectedNumbers(prev => prev.filter(n => n !== number));
-      console.log('Reserva deletada com sucesso');
     }
   };
 
   // Reset da cartela
   const resetRifa = async () => {
-    console.log('Tentando fazer reset da rifa');
     if (window.confirm('Confirma o reset completo da cartela? Esta ação não pode ser desfeita!')) {
-      if (isProduction && API_URL && isOnline) {
+      if (isProduction) {
         try {
-          await fetch(API_URL, { method: 'DELETE' });
+          await fetch('/api/data', { method: 'DELETE' });
         } catch (error) {
           console.error('Erro ao resetar na API:', error);
         }
@@ -313,7 +303,6 @@ const RifaManager = () => {
       setShowModal(false);
       setEditingReservation(null);
       setFormData({ name: '', contact: '', notes: '', status: 'paid' });
-      console.log('Reset realizado com sucesso');
     }
   };
 

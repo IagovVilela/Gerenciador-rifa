@@ -30,6 +30,148 @@ const RifaManager = () => {
     status: 'paid'
   });
 
+  // Função para carregar do Supabase
+  // eslint-disable-next-line no-unused-vars
+  const loadFromSupabase = async () => {
+    try {
+      console.log('📥 Carregando do Supabase...');
+      
+      // Carregar reservas
+      const resResponse = await fetch('https://qixtamnvrexfjmfuejfz.supabase.co/rest/v1/rifa_data?type=eq.reservations', {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU'
+        }
+      });
+      
+      // Carregar config
+      const configResponse = await fetch('https://qixtamnvrexfjmfuejfz.supabase.co/rest/v1/rifa_data?type=eq.config', {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU'
+        }
+      });
+      
+      if (resResponse.ok) {
+        const resData = await resResponse.json();
+        if (resData && resData.length > 0 && resData[0].data) {
+          // Processar timestamps formatados para reservas existentes
+          const processedReservations = { ...resData[0].data };
+          Object.keys(processedReservations).forEach(key => {
+            if (processedReservations[key]) {
+              const reservation = processedReservations[key];
+              if (reservation.createdAt && !reservation.createdAtFormatted) {
+                reservation.createdAtFormatted = new Date(reservation.createdAt).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              }
+              if (reservation.updatedAt && !reservation.updatedAtFormatted) {
+                reservation.updatedAtFormatted = new Date(reservation.updatedAt).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+              }
+            }
+          });
+          
+          console.log('✅ Reservas carregadas do Supabase:', processedReservations);
+          setReservations(processedReservations);
+        }
+      }
+      
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
+        if (configData && configData.length > 0 && configData[0].data) {
+          console.log('✅ Config carregada do Supabase:', configData[0].data);
+          setRifaConfig(configData[0].data);
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar do Supabase:', error);
+    }
+  };
+
+  // Função para salvar no Supabase com timestamps
+  const saveToSupabase = async (reservations, config) => {
+    try {
+      console.log('💾 Salvando no Supabase...');
+      const now = new Date().toISOString();
+      
+      // Adicionar timestamp às reservas
+      const reservationsWithTimestamp = { ...reservations };
+      const nowFormatted = new Date().toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      Object.keys(reservationsWithTimestamp).forEach(key => {
+        if (reservationsWithTimestamp[key]) {
+          reservationsWithTimestamp[key] = {
+            ...reservationsWithTimestamp[key],
+            updatedAt: now,
+            updatedAtFormatted: nowFormatted
+          };
+        }
+      });
+      
+      // Adicionar timestamp à config
+      const configWithTimestamp = {
+        ...config,
+        updatedAt: now
+      };
+      
+      // Salvar reservas
+      if (Object.keys(reservations).length > 0) {
+        const resResponse = await fetch('https://qixtamnvrexfjmfuejfz.supabase.co/rest/v1/rifa_data?type=eq.reservations', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU'
+          },
+          body: JSON.stringify({ 
+            data: reservationsWithTimestamp
+          })
+        });
+        
+        if (resResponse.ok) {
+          console.log('✅ Reservas salvas no Supabase!', now);
+        }
+      }
+      
+      // Salvar config
+      const configResponse = await fetch('https://qixtamnvrexfjmfuejfz.supabase.co/rest/v1/rifa_data?type=eq.config', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU'
+        },
+        body: JSON.stringify({ 
+          data: configWithTimestamp
+        })
+      });
+      
+      if (configResponse.ok) {
+        console.log('✅ Config salva no Supabase!', now);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na conexão com Supabase:', error);
+    }
+  };
+
   // Função auxiliar para salvar no localStorage
   const saveToLocalStorage = (key, data) => {
     try {
@@ -59,32 +201,51 @@ const RifaManager = () => {
     }
   };
 
-  // Carregar dados do localStorage ao inicializar
+  // Carregar dados do Supabase e localStorage ao inicializar
   useEffect(() => {
-    console.log('🔄 Carregando dados do localStorage...');
+    const loadData = async () => {
+      console.log('🔄 Carregando dados...');
+      
+      // Primeiro tenta carregar do Supabase
+      await loadFromSupabase();
+      
+      // Depois carrega do localStorage como backup
+      const loadedReservations = loadFromLocalStorage('rifaReservations', {});
+      const loadedConfig = loadFromLocalStorage('rifaConfig', {
+        totalNumbers: 300,
+        rifaTitle: 'Grande Rifa Beneficente',
+        prizeDescription: 'Prêmio Principal: R$ 5.000,00',
+        numberPrice: 5.00
+      });
+      
+      // Se não há dados do Supabase, usa o localStorage
+      if (Object.keys(reservations).length === 0) {
+        setReservations(loadedReservations);
+      }
+      if (!rifaConfig.rifaTitle) {
+        setRifaConfig(loadedConfig);
+      }
+      
+      console.log('✅ Dados carregados com sucesso!');
+    };
     
-    const loadedReservations = loadFromLocalStorage('rifaReservations', {});
-    const loadedConfig = loadFromLocalStorage('rifaConfig', {
-      totalNumbers: 300,
-      rifaTitle: 'Grande Rifa Beneficente',
-      prizeDescription: 'Prêmio Principal: R$ 5.000,00',
-      numberPrice: 5.00
-    });
-    
-    setReservations(loadedReservations);
-    setRifaConfig(loadedConfig);
-    
-    console.log('✅ Dados carregados com sucesso!');
+    loadData();
   }, []);
 
-  // Salvar dados no localStorage sempre que houver mudanças
+  // Salvar dados no localStorage e Supabase sempre que houver mudanças
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     saveToLocalStorage('rifaReservations', reservations);
-  }, [reservations]);
+    // Salvar no Supabase também
+    saveToSupabase(reservations, rifaConfig);
+  }, [reservations, rifaConfig]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     saveToLocalStorage('rifaConfig', rifaConfig);
-  }, [rifaConfig]);
+    // Salvar no Supabase também
+    saveToSupabase(reservations, rifaConfig);
+  }, [rifaConfig, reservations]);
 
   // Autenticação simples
   const handleLogin = () => {
@@ -146,13 +307,23 @@ const RifaManager = () => {
 
     const newReservations = { ...reservations };
     const timestamp = new Date().toISOString();
+    const timestampFormatted = new Date().toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     
     selectedNumbers.forEach(number => {
+      const isNewReservation = !editingReservation || !reservations[number];
       newReservations[number] = {
         ...formData,
         number,
-        createdAt: editingReservation ? reservations[number].createdAt : timestamp,
-        updatedAt: timestamp
+        createdAt: isNewReservation ? timestamp : reservations[number].createdAt,
+        updatedAt: timestamp,
+        createdAtFormatted: isNewReservation ? timestampFormatted : (reservations[number].createdAtFormatted || timestampFormatted),
+        updatedAtFormatted: timestampFormatted
       };
     });
 
@@ -197,31 +368,78 @@ const RifaManager = () => {
     }
   };
 
-  // Exportar dados CSV
+  // Exportar dados CSV com formatação melhorada
   const exportToCSV = () => {
     const csvData = Object.values(reservations).map(res => ({
       numero: res.number,
       nome: res.name,
-      contato: res.contact || '',
-      observacoes: res.notes || '',
-      status: res.status,
-      data_reserva: new Date(res.createdAt).toLocaleDateString('pt-BR')
+      contato: res.contact || 'Não informado',
+      observacoes: res.notes || 'Sem observações',
+      status: res.status === 'paid' ? 'Pago' : 
+              res.status === 'pending' ? 'Pendente' : 'Cancelado',
+      data_criacao: res.createdAtFormatted || new Date(res.createdAt).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      data_atualizacao: res.updatedAtFormatted || new Date(res.updatedAt).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      valor: `R$ ${(rifaConfig.numberPrice || 5.00).toFixed(2).replace('.', ',')}`
     }));
 
-    const headers = ['Número', 'Nome', 'Contato', 'Observações', 'Status', 'Data da Reserva'];
+    // Ordenar por número
+    csvData.sort((a, b) => a.numero - b.numero);
+
+    // Cabeçalhos em português
+    const headers = ['Número', 'Nome', 'Contato', 'Observações', 'Status', 'Data de Criação', 'Data de Atualização', 'Valor'];
+    
+    // Criar conteúdo CSV com formatação
     const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => Object.values(row).map(value => `"${value}"`).join(','))
+      // Cabeçalho principal
+      `RELATÓRIO DE RIFAS - ${rifaConfig.rifaTitle || 'Rifa Beneficente'}`,
+      `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      `Total de reservas: ${csvData.length}`,
+      `Valor por número: R$ ${(rifaConfig.numberPrice || 5.00).toFixed(2).replace('.', ',')}`,
+      `Valor total arrecadado: R$ ${(csvData.filter(r => r.status === 'Pago').length * (rifaConfig.numberPrice || 5.00)).toFixed(2).replace('.', ',')}`,
+      '', // Linha em branco
+      // Cabeçalhos das colunas
+      headers.join(';'),
+      // Dados
+      ...csvData.map(row => [
+        row.numero,
+        `"${row.nome}"`,
+        `"${row.contato}"`,
+        `"${row.observacoes}"`,
+        row.status,
+        `"${row.data_criacao}"`,
+        `"${row.data_atualizacao}"`,
+        row.valor
+      ].join(';'))
     ].join('\n');
 
+    // Criar e baixar arquivo
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `rifa_${rifaConfig.rifaTitle.replace(/\s+/g, '_')}.csv`);
+    
+    // Nome do arquivo com data
+    const fileName = `rifa_${rifaConfig.rifaTitle?.replace(/\s+/g, '_') || 'beneficente'}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', fileName);
+    
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    console.log('📊 Relatório CSV exportado:', fileName);
   };
 
   // Estatísticas
@@ -586,7 +804,7 @@ const RifaManager = () => {
                   <th className="text-left py-2 px-3">Nome</th>
                   <th className="text-left py-2 px-3">Contato</th>
                   <th className="text-left py-2 px-3">Status</th>
-                  <th className="text-left py-2 px-3">Data</th>
+                  <th className="text-left py-2 px-3">Data/Hora</th>
                   <th className="text-left py-2 px-3">Ações</th>
                 </tr>
               </thead>
@@ -607,7 +825,28 @@ const RifaManager = () => {
                       </span>
                     </td>
                     <td className="py-2 px-3">
-                      {new Date(reservation.createdAt).toLocaleDateString('pt-BR')}
+                      <div className="text-xs">
+                        <div className="font-medium">
+                          {reservation.createdAtFormatted || new Date(reservation.createdAt).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        {reservation.updatedAt && reservation.updatedAt !== reservation.createdAt && (
+                          <div className="text-gray-500">
+                            Atualizado: {reservation.updatedAtFormatted || new Date(reservation.updatedAt).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2 px-3">
                       <div className="flex gap-1">

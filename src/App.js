@@ -202,7 +202,6 @@ const RifaManager = () => {
   };
 
   // Carregar dados do Supabase e localStorage ao inicializar
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const loadData = async () => {
       console.log('🔄 Carregando dados...');

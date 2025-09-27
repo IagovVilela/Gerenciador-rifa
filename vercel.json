@@ -2,14 +2,16 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "build",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "REACT_APP_SUPABASE_URL": "https://qixtamnvrexfjmfuejfz.supabase.co",
+    "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpeHRhbW52cmV4ZmptZnVlamZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Njc0NDIsImV4cCI6MjA3NDM0MzQ0Mn0.Ts1HHnXLOGjTKXxNDIpN0a77wh55bMeF17cHYCnA3MU"
+  }
 }
